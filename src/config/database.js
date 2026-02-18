@@ -1,4 +1,12 @@
 const mysql = require("mysql2/promise");
+console.log("DB ENV CHECK 👉", {
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  pass: process.env.MYSQLPASSWORD?.slice(0, 4) + "****",
+  port: process.env.MYSQLPORT,
+  db: process.env.MYSQLDATABASE,
+});
+
 
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,

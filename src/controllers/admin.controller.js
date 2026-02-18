@@ -1,4 +1,4 @@
-const db = require("../config/db");
+const db = require("../config/database.js");
 
 // Create Class
 exports.createClass = async (req, res) => {

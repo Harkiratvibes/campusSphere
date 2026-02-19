@@ -1,3 +1,10 @@
+console.log("🚀 BOOTING APP...");
+console.log("PORT =", process.env.MYSQLPORT);
+console.log("DB_HOST =", process.env.MYSQLHOST);
+console.log("DB_USER =", process.env.MYSQLUSER);
+console.log("DB_NAME =", process.env.MYSQLDATABASE);
+console.log("JWT =", process.env.JWT_SECRET);
+
 require("dotenv").config();
 
 console.log("🔥 App starting...");

@@ -103,3 +103,125 @@ exports.deleteClass = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+// ================= SUBJECT CONTROLLERS =================
+
+// Create Subject
+exports.createSubject = async (req, res) => {
+  try {
+    const { name, class_id } = req.body;
+
+    if (!name || !class_id) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    await db.query(
+      "INSERT INTO subjects (name, class_id) VALUES (?, ?)",
+      [name, class_id]
+    );
+
+    res.status(201).json({
+      message: "Subject created successfully",
+    });
+
+  } catch (err) {
+    console.error("Create Subject Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// Get All Subjects (With Class Name)
+exports.getAllSubjects = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        subjects.id,
+        subjects.name,
+        classes.name AS class_name,
+        classes.year
+      FROM subjects
+      JOIN classes ON subjects.class_id = classes.id
+    `);
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Get Subjects Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// Get Single Subject By ID
+exports.getSubjectById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      "SELECT * FROM subjects WHERE id = ?",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    res.json(rows[0]);
+
+  } catch (err) {
+    console.error("Get Subject Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// Update Subject
+exports.updateSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, class_id } = req.body;
+
+    if (!name || !class_id) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const [result] = await db.query(
+      "UPDATE subjects SET name = ?, class_id = ? WHERE id = ?",
+      [name, class_id, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    res.json({ message: "Subject updated successfully" });
+
+  } catch (err) {
+    console.error("Update Subject Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// Delete Subject
+exports.deleteSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await db.query(
+      "DELETE FROM subjects WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    res.json({ message: "Subject deleted successfully" });
+
+  } catch (err) {
+    console.error("Delete Subject Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

@@ -2,44 +2,130 @@ const db = require("../config/database");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-// LOGIN
-exports.login = (req, res) => {
-  const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "All fields required" });
-  }
+/* ================= REGISTER ================= */
 
-  const sql = `
-    SELECT u.*, r.name AS role
-    FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.email = ?
-  `;
+exports.register = async (req, res) => {
+  try {
 
-  db.query(sql, [email], async (err, result) => {
-    if (err) return res.status(500).json(err);
+    console.log("🔥 REGISTER API HIT");
 
-    if (result.length === 0) {
-      return res.status(401).json({ message: "Invalid email" });
+    const { name, email, password, role_id } = req.body;
+
+    if (!name || !email || !password || !role_id) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required"
+      });
     }
 
-    const user = result[0];
+    console.log("⏳ Checking email...");
+
+    // Check if email exists
+    const [existing] = await db.query(
+      "SELECT id FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists"
+      });
+    }
+
+    console.log("✅ Email OK");
+
+    // Hash password
+    const hash = await bcrypt.hash(password, 10);
+
+    console.log("🔐 Password hashed");
+
+    // Insert user
+    await db.query(
+      "INSERT INTO users (name,email,password_hash,role_id) VALUES (?,?,?,?)",
+      [name, email, hash, role_id]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully 🔥"
+    });
+
+  } catch (err) {
+
+    console.error("Register Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+
+
+/* ================= LOGIN ================= */
+
+exports.login = async (req, res) => {
+  try {
+
+    console.log("🔥 LOGIN API HIT");
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required"
+      });
+    }
+
+    const sql = `
+      SELECT u.*, r.name AS role
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.email = ?
+    `;
+
+    console.log("⏳ Fetching user...");
+
+    const [rows] = await db.query(sql, [email]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email"
+      });
+    }
+
+    const user = rows[0];
+
+    console.log("✅ User found");
 
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
-      return res.status(401).json({ message: "Wrong password" });
+      return res.status(401).json({
+        success: false,
+        message: "Wrong password"
+      });
     }
 
+    console.log("🔓 Password matched");
+
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      {
+        id: user.id,
+        role: user.role
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    res.json({
+    return res.json({
       success: true,
+      message: "Login successful",
       token,
       user: {
         id: user.id,
@@ -47,52 +133,14 @@ exports.login = (req, res) => {
         role: user.role
       }
     });
-  });
-};
 
-
-
-exports.register = async (req, res) => {
-  try {
-    console.log("🔥 REGISTER API HIT");
-
-    const { name, email, password, role_id } = req.body;
-
-    if (!name || !email || !password || !role_id) {
-      return res.status(400).json({ message: "All fields required" });
-    }
-
-    // Check if email exists
-    console.log("⏳ Before DB query");
-
-    db.query(
-      "SELECT id FROM users WHERE email = ?",
-      [email],
-      async (err, result) => {
-        if (err) return res.status(500).json(err);
-
-        if (result.length > 0) {
-          return res.status(400).json({ message: "Email already exists" });
-        }
-        console.log("⏳ after DB query");
-
-
-        // Hash password
-        const hash = await bcrypt.hash(password, 10);
-
-        // Insert user
-        db.query(
-          "INSERT INTO users (name,email,password_hash,role_id) VALUES (?,?,?,?)",
-          [name, email, hash, role_id],
-          (err) => {
-            if (err) return res.status(500).json(err);
-
-            res.json({ message: "User registered successfully 🔥" });
-          }
-        );
-      }
-    );
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+
+    console.error("Login Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };

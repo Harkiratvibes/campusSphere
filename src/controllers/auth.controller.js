@@ -50,9 +50,12 @@ exports.login = (req, res) => {
   });
 };
 
-// REGISTER
+
+
 exports.register = async (req, res) => {
   try {
+    console.log("🔥 REGISTER API HIT");
+
     const { name, email, password, role_id } = req.body;
 
     if (!name || !email || !password || !role_id) {
@@ -60,6 +63,8 @@ exports.register = async (req, res) => {
     }
 
     // Check if email exists
+    console.log("⏳ Before DB query");
+
     db.query(
       "SELECT id FROM users WHERE email = ?",
       [email],
@@ -69,6 +74,8 @@ exports.register = async (req, res) => {
         if (result.length > 0) {
           return res.status(400).json({ message: "Email already exists" });
         }
+        console.log("⏳ after DB query");
+
 
         // Hash password
         const hash = await bcrypt.hash(password, 10);

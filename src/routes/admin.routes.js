@@ -54,12 +54,11 @@ router.delete("/subjects/:id", auth, role(["admin"]), deleteSubject);
 // Teacher APIs (Admin Only)
 
 const {
-  createTeacher,
+  
   getAllTeachers,
   deleteTeacher
 } = require("../controllers/admin.controller");
 
-router.post("/teachers", auth, role(["admin"]), createTeacher);
 
 router.get("/teachers", auth, role(["admin"]), getAllTeachers);
 

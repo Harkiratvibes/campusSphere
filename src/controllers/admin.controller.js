@@ -226,112 +226,79 @@ exports.deleteSubject = async (req, res) => {
 };
 // ================= TEACHER CONTROLLERS =================
 
-const bcrypt = require("bcrypt");
+// ================= TEACHER CONTROLLERS (ADMIN ONLY) =================
 
-// Create Teacher (Create User + Teacher Profile)
-exports.createTeacher = async (req, res) => {
+
+// Get All Teachers (Admin View)
+exports.getAllTeachers = async (req, res) => {
   try {
-    const { name, email, password, department } = req.body;
 
-    if (!name || !email || !password || !department) {
-      return res.status(400).json({ message: "All fields required" });
-    }
+    const [rows] = await db.query(`
+      SELECT 
+        t.id,
+        u.id AS user_id,
+        u.name,
+        u.email,
+        t.department
+      FROM teachers t
+      JOIN users u ON t.user_id = u.id
+      WHERE u.role_id = 2
+    `);
 
-    // Check email
-    const [existing] = await db.query(
-      "SELECT id FROM users WHERE email = ?",
-      [email]
-    );
-
-    if (existing.length > 0) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-
-    // Hash password
-    const hash = await bcrypt.hash(password, 10);
-
-    // Get teacher role id
-    const [roleData] = await db.query(
-      "SELECT id FROM roles WHERE name = 'teacher'"
-    );
-
-    const role_id = roleData[0].id;
-
-    // Insert user
-    const [userResult] = await db.query(
-      "INSERT INTO users (name,email,password,role_id) VALUES (?,?,?,?)",
-      [name, email, hash, role_id]
-    );
-
-    const user_id = userResult.insertId;
-
-    // Insert teacher profile
-    await db.query(
-      "INSERT INTO teachers (user_id, department) VALUES (?,?)",
-      [user_id, department]
-    );
-
-    res.status(201).json({
-      message: "Teacher created successfully",
+    res.json({
+      success: true,
+      data: rows
     });
 
   } catch (err) {
-    console.error("Create Teacher Error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
 
-
-// Get All Teachers
-exports.getAllTeachers = async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        teachers.id,
-        users.name,
-        users.email,
-        teachers.department
-      FROM teachers
-      JOIN users ON teachers.user_id = users.id
-    `);
-
-    res.json(rows);
-
-  } catch (err) {
     console.error("Get Teachers Error:", err);
-    res.status(500).json({ message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
 
 
-// Delete Teacher
+// Delete Teacher (Admin Remove Access)
 exports.deleteTeacher = async (req, res) => {
   try {
+
     const { id } = req.params;
 
-    // Get user id first
-    const [rows] = await db.query(
+    // Find teacher
+    const [[teacher]] = await db.query(
       "SELECT user_id FROM teachers WHERE id = ?",
       [id]
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Teacher not found" });
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found"
+      });
     }
 
-    const user_id = rows[0].user_id;
-
-    // Delete teacher
+    // Delete profile
     await db.query("DELETE FROM teachers WHERE id = ?", [id]);
 
-    // Delete user
-    await db.query("DELETE FROM users WHERE id = ?", [user_id]);
+    // Delete user account
+    await db.query("DELETE FROM users WHERE id = ?", [teacher.user_id]);
 
-    res.json({ message: "Teacher deleted successfully" });
+    res.json({
+      success: true,
+      message: "Teacher removed successfully"
+    });
 
   } catch (err) {
+
     console.error("Delete Teacher Error:", err);
-    res.status(500).json({ message: "Server error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
-

@@ -19,8 +19,6 @@ exports.register = async (req, res) => {
       });
     }
 
-    console.log("⏳ Checking email...");
-
     // Check if email exists
     const [existing] = await db.query(
       "SELECT id FROM users WHERE email = ?",
@@ -34,18 +32,40 @@ exports.register = async (req, res) => {
       });
     }
 
-    console.log("✅ Email OK");
-
     // Hash password
     const hash = await bcrypt.hash(password, 10);
 
-    console.log("🔐 Password hashed");
-
     // Insert user
-    await db.query(
+    const [userResult] = await db.query(
       "INSERT INTO users (name,email,password_hash,role_id) VALUES (?,?,?,?)",
       [name, email, hash, role_id]
     );
+
+    const user_id = userResult.insertId;
+
+    // ================= ROLE BASED PROFILE CREATION =================
+
+    // If Teacher (role_id = 2)
+    if (parseInt(role_id) === 2) {
+
+      await db.query(
+        "INSERT INTO teachers (user_id, department) VALUES (?,?)",
+        [user_id, "Not Assigned"]
+      );
+
+      console.log("👨‍🏫 Teacher profile created");
+    }
+
+    // If Student (role_id = 3)
+    if (parseInt(role_id) === 3) {
+
+      await db.query(
+        "INSERT INTO students (user_id, roll_number, class_id) VALUES (?,?,?)",
+        [user_id, null, null]
+      );
+
+      console.log("🎓 Student profile created");
+    }
 
     return res.status(201).json({
       success: true,
